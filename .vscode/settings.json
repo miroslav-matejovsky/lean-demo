@@ -46,6 +46,7 @@
   "powershell.integratedConsole.showOnStartup": false,
   "powershell.enableProfileLoading": true,
   "cSpell.words": [
-    "leanprover"
+    "leanprover",
+    "println"
   ]
 }

@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  feline-build:
+    desc: "Build the feline project"
+    dir: ./feline
+    cmds:
+      - lake build
