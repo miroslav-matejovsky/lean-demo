@@ -6,3 +6,9 @@ tasks:
     dir: ./feline
     cmds:
       - lake build
+
+  greeting-run:
+    desc: "Run the greeting project"
+    dir: ./greeting
+    cmds:
+      - lake exe greeting
