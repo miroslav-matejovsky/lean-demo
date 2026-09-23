@@ -1,4 +1,4 @@
-# 03 · Specification vs. implementation
+# 03 - Specification vs. implementation
 
 This lesson is the hinge between "Lean for maths" and "Lean for architecture".
 
@@ -21,13 +21,15 @@ spec says, for all inputs. `sumImpl_correct` below is a tiny but complete exampl
    The strongest form. It only works when the implementation is *also in Lean*
    (or translated into Lean).
 2. **Properties** (`maxOf_ge`, `maxOf_mem`)
-   The spec says what must hold, not how. It is good for policies, and the Order
-   invariant in Part 2 takes this form.
-3. **Executable oracle** (`#eval sumSpec …`)
-   The spec *runs*, so it can produce expected outputs for code in other
-   languages. This is **weaker than a proof** (it covers only the inputs you
-   sample), but it works for .NET and Go **today**, with no change to how teams write code.
+   The spec says what must hold, not how. Good for policies. The alarm invariant
+   in Part 2 takes this form. So does the health view: "the best report wins" is
+   a `max` under a total order, exactly like `maxOf`.
+3. **Executable oracle** (`#eval sumSpec ...`)
+   The spec *runs*, so it produces expected outputs for code in other
+   languages. This is **weaker than a proof**: it covers only the inputs you
+   sample. But it works for .NET and Go **today**, with no change to how teams
+   write code.
 
-Part 2 combines (2) and (3). Properties are proven **about the spec**, and the
+Part 2 combines (2) and (3). Properties are proven **about the spec**. The
 oracle checks that implementations **behave like the spec**. The gap between
-those two guarantees is examined honestly in [Limits](../discussion/limits.md).
+the two is examined in [Limits](../discussion/limits.md).

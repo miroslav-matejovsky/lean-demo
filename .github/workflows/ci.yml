@@ -1,7 +1,7 @@
-name: verify
+name: all
 
-# The same gate as `task verify:full` locally: proofs, audit, drift,
-# .NET + Go conformance and mutation testing.
+# Runs the same gate as locally: `task all`
+# (proofs, drift, vet, conformance, audit, lint, mutation testing).
 on:
   push:
     branches: [main]
@@ -12,15 +12,22 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
+  all:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v7
 
       - name: Install elan (Lean toolchain manager)
         run: |
-          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
-          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          $zip = Join-Path $env:RUNNER_TEMP "elan.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "elan"
+          Invoke-WebRequest "https://github.com/leanprover/elan/releases/latest/download/elan-x86_64-pc-windows-msvc.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath $dir
+          & (Join-Path $dir "elan-init.exe") -y --default-toolchain none
+          Join-Path $env:USERPROFILE ".elan\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       - name: Cache Lean toolchain and build
         uses: actions/cache@v4
@@ -38,10 +45,22 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: impl/go/go.mod
-          cache: false
+          cache-dependency-path: impl/go/go.sum
 
       - uses: go-task/setup-task@v1
 
-      - name: Verify (proofs, audit, drift, conformance, mutation)
-        shell: pwsh
-        run: task verify:full
+      - name: Install Go tools
+        run: |
+          task tools
+          Join-Path (go env GOPATH) "bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: task all
+        run: task all
+
+      - name: Keep test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .test-results/
+          if-no-files-found: ignore

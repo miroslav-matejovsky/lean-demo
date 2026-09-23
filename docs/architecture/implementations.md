@@ -1,55 +1,87 @@
 # Implementations
 
-Two "teams" implement the same truth in their own idioms. Neither imports
-Lean, and neither needs to know it exists, apart from the generated file and
-the vectors.
+Two teams implement the same truth in their own idioms. Neither imports Lean.
+Each sees only the generated contract file and the vectors.
 
-=== ".NET: immutable record aggregate"
+## Safety zone
 
-    `impl/dotnet/src/Orders/Order.cs`
+=== "Go: value-type Track"
 
-    ```csharp
-    --8<-- "impl/dotnet/src/Orders/Order.cs"
-    ```
-
-=== "Go: value-type aggregate"
-
-    `impl/go/orders/order.go`
+    `impl/go/zone/track.go`
 
     ```go
-    --8<-- "impl/go/orders/order.go"
+    --8<-- "impl/go/zone/track.go"
     ```
 
-## What the spec does *not* dictate
+=== ".NET: immutable record"
 
-This is intentional. The truth constrains **observable behaviour**, not design:
+    `impl/dotnet/src/Surveillance/Zone/Track.cs`
+
+    ```csharp
+    --8<-- "impl/dotnet/src/Surveillance/Zone/Track.cs"
+    ```
+
+## Site health view
+
+=== "Go: comparable value View"
+
+    `impl/go/health/view.go`
+
+    ```go
+    --8<-- "impl/go/health/view.go"
+    ```
+
+=== ".NET: immutable SiteView"
+
+    `impl/dotnet/src/Surveillance/Health/SiteView.cs`
+
+    ```csharp
+    --8<-- "impl/dotnet/src/Surveillance/Health/SiteView.cs"
+    ```
+
+## Actors
+
+Both `Apply` functions are pure: state and message in, new state or a typed
+rejection out. That is deliberate. In an actor runtime the actor adds identity,
+mailbox, lifecycle and supervision, and delegates behaviour:
+
+| Runtime | Actor | Calls |
+|---|---|---|
+| Go (for example Ergo) | one process per MMSI | `track.Apply(msg)` in the message handler |
+| .NET (virtual actors) | one grain per MMSI | `Track.Apply(msg)` in the grain method |
+
+The spec covers exactly the part that must be identical across runtimes: the
+behaviour for a given message sequence. Mailbox order, restarts and
+persistence are the runtime's job and are not covered. See
+[Limits](../discussion/limits.md).
+
+## What the spec leaves to teams
 
 | Free for teams | Fixed by the truth |
 |---|---|
-| Records vs. structs, mutable vs. immutable | State after each event |
-| Exceptions vs. result types internally | Which error code is returned |
-| Persistence, APIs, messaging, DI | Canonical names on the wire |
-| Performance tricks (caching totals, …) | Limits, thresholds, precedence |
+| structs vs. records, arrays vs. immutable collections | state after each message |
+| error style: typed error (Go), result value (.NET) | which error code is returned |
+| persistence, APIs, messaging, actor runtime | canonical names on the wire |
+| performance tricks | limits, boundaries, precedence, tie-breaks |
 
 ## The replay harness
 
-The only Lean-aware code in each project is a generic harness. It reads the
-vectors, maps wire events to domain events, applies them, and compares results.
+The only spec-aware test code: read vectors, map wire messages to domain
+messages, apply, compare.
+
+=== "Go (testify)"
+
+    ```go
+    --8<-- "impl/go/zone/conformance_test.go"
+    ```
 
 === ".NET (xUnit)"
 
     ```csharp
-    --8<-- "impl/dotnet/tests/Orders.Conformance/ConformanceTests.cs"
+    --8<-- "impl/dotnet/tests/Surveillance.Conformance/ZoneConformanceTests.cs"
     ```
 
-=== "Go (testing)"
-
-    ```go
-    --8<-- "impl/go/orders/conformance_test.go"
-    ```
-
-!!! tip "Adding a third language"
-    Write the harness (about 100 lines), add a generator in
-    `lean/Truth/Export/Codegen.lean` for its constants, add the output path in
-    `lean/Main.lean`, and add a stage in `taskfile/verify.ps1`. Nothing in
-    the business rules changes.
+!!! tip "Adding a third implementation"
+    Write a harness (about 100 lines), add a generator for its constants in
+    `lean/Truth/Export`, add the output path in `lean/Main.lean`, and add a task.
+    The business rules do not change.

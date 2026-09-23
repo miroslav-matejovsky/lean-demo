@@ -1,23 +1,30 @@
-# Part 2 · Lean as architectural truth
+# Part 2 - Lean as architectural truth
 
 ## The problem
 
-In a typical enterprise, the "truth" about a domain is scattered. It lives in
-Confluence pages, BPMN diagrams, ADRs, OpenAPI files, and the heads of a few
-senior people. Each team re-implements its understanding of that truth, and
-the implementations drift. Nobody can say with confidence that *every* service
-enforces the four-eyes rule on large orders.
+A maritime surveillance system is many services built by several teams. An AIS
+ingest service in Go. An alarm service. An operator console in .NET (WPF or
+web). A platform that runs primary and standby instances on every site.
 
-Traditional mitigations each cover only part of the problem:
+Each team implements its understanding of the same rules:
 
-| Artifact | Precise? | Checked against code? | Can express *rules over all behaviours*? |
+- when is a vessel "inside" the safety zone, and is the boundary inside?
+- does an alarm clear itself when the vessel leaves, or does it wait for the operator?
+- what happens when AIS goes dark, or a report arrives twice, or late?
+- which health report wins when primary and standby disagree?
+
+The rules live in documents, tickets and heads. The implementations drift. In
+an incident review nobody can say that *every* service handles a late report
+the same way.
+
+| Artifact | Precise? | Checked against code? | Rules over *all* message sequences? |
 |---|---|---|---|
-| Wiki / diagrams | ✗ | ✗ | ✗ |
-| OpenAPI / JSON Schema | shape only | ✓ (contract tests) | ✗ |
-| Shared test suite | examples only | ✓ | ✗ |
-| **Executable Lean spec + proofs + vectors** | ✓ | ✓ (conformance) | ✓ (theorems) |
+| Wiki, diagrams | no | no | no |
+| OpenAPI, JSON Schema, CUE | shape and data constraints | yes | no |
+| Shared test suite | examples only | yes | no |
+| **Lean spec + theorems + generated vectors** | yes | yes (conformance) | yes (theorems) |
 
-## The approach in this repo
+## The approach
 
 ```mermaid
 sequenceDiagram
@@ -25,33 +32,44 @@ sequenceDiagram
     participant A as Architect
     participant L as Lean (spec + proofs)
     participant X as truth export
-    participant R as Repo (contracts/, generated code)
+    participant R as Repo (contracts, generated code)
     participant T as Team (.NET / Go)
-    participant CI as CI gate
+    participant CI as task all
     A->>L: change Spec.lean
     L-->>A: lake build: theorems still hold? (or fail)
     A->>X: task contracts
-    X->>R: vectors.json, manifest.json, Contract.g.cs, contract_gen.go, docs
-    A->>R: PR with spec + generated diff
-    CI->>R: drift check (regenerate == committed?)
-    T->>R: implement behaviour change
-    CI->>T: conformance tests replay vectors
-    CI-->>A: ✔ merged: truth and code aligned
+    X->>R: vectors, manifests, Contract.g.cs, contract_gen.go, reference pages
+    A->>R: pull request: Lean diff + generated diff
+    CI->>R: drift gate: regenerated == committed?
+    T->>R: implement the behaviour change
+    CI->>T: conformance tests replay the vectors
+    CI-->>A: merged: truth and code aligned
 ```
 
-The approach separates **three kinds of guarantee**:
+Three kinds of guarantee, from strongest to weakest:
 
-1. **Internal consistency of the truth.** *The spec cannot violate the business rules.*
-   This is checked by Lean's kernel and is a proof, for all inputs.
-2. **Shape alignment.** *The code uses the same names, enums and constants.*
-   This comes from code generation plus a drift check, so it is exact.
-3. **Behavioural alignment.** *The code reacts to events like the spec.*
-   This comes from conformance vectors. It is strong but *sampled*, and
-   [mutation testing](conformance.md#5-mutation-testing) measures how strong.
+1. **The truth is internally consistent.** The spec cannot violate its rules.
+   Checked by Lean's kernel: a proof, for all inputs and all message orders.
+2. **Shape alignment.** The code uses the same names, enum values and
+   constants. Generated from the spec and drift-checked: exact.
+3. **Behavioural alignment.** The code reacts to messages like the spec.
+   Conformance vectors: strong but *sampled*.
+   [Mutation testing](conformance.md#5-mutation-testing) measures how strong.
+
+## Two specs, two kinds of truth
+
+| | [Safety zone](zone-spec.md) | [Site health view](health-spec.md) |
+|---|---|---|
+| Shape | one actor per vessel, state machine | replicated state, CRDT |
+| Key question | does the alarm always tell the truth? | do all replicas show the same truth? |
+| Main theorem | alarm active exactly when an unauthorized vessel is inside | same reports in any order give the same view |
+| Messy reality | duplicates, late reports, AIS going dark | late, reordered, duplicated reports, anti-entropy |
+| Uncomfortable finding | a late intrusion report is never seen | on equal time, the worse report wins, by design |
 
 Read on:
 
-- [The Order specification](order-spec.md): what the truth looks like
-- [Conformance pipeline](conformance.md): vectors, codegen, drift, audit, mutation
-- [Implementations](implementations.md): what teams actually write
-- [Operating model](operating-model.md): ownership, versioning, change process
+- [Safety zone spec](zone-spec.md)
+- [Site health spec](health-spec.md)
+- [Conformance pipeline](conformance.md)
+- [Implementations](implementations.md)
+- [Operating model](operating-model.md)

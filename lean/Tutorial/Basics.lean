@@ -1,8 +1,8 @@
 /-!
-# 01 · Basics: propositions are types, proofs are programs
+# 01 - Basics: propositions are types, proofs are programs
 
 Lean checks every `theorem` when the file is compiled. If this file builds,
-every statement below is *true* – not "tested", but proven.
+every statement below is *true*. Not "tested": proven.
 
 Open this file in VS Code (with the `lean4` extension) and put your cursor
 inside a `by` block: the *Infoview* panel shows the current goal.
@@ -67,9 +67,9 @@ theorem forall_succ_pos : ∀ n : Nat, 0 < n + 1 := fun n => Nat.succ_pos n
 
 In practice you rarely write proof terms by hand. Lean ships powerful
 tactics:
-* `simp`  – rewriting with a database of lemmas,
-* `omega` – decision procedure for linear arithmetic over `Nat`/`Int`,
-* `grind` – SMT-style automation (congruence closure, arithmetic, case splits).
+* `simp`: rewriting with a database of lemmas,
+* `omega`: decision procedure for linear arithmetic over `Nat`/`Int`,
+* `grind`: SMT-style automation (congruence closure, arithmetic, case splits).
 -/
 
 theorem linear (a b : Nat) (h₁ : a < b) (h₂ : b < 10) : a + 1 < 10 := by omega

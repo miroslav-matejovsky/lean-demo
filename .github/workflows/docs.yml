@@ -1,7 +1,7 @@
 name: docs
 
 # Builds the Zensical site and publishes it to GitHub Pages.
-# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
 on:
   push:
     branches: [main]

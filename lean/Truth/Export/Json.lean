@@ -12,6 +12,7 @@ inductive Json where
   | null
   | bool (b : Bool)
   | num (n : Nat)
+  | int (i : Int)
   | str (s : String)
   | arr (xs : List Json)
   | obj (kvs : List (String × Json))
@@ -33,6 +34,7 @@ partial def compact : Json → String
   | .null => "null"
   | .bool b => toString b
   | .num n => toString n
+  | .int i => toString i
   | .str s => "\"" ++ escape s ++ "\""
   | .arr xs => "[" ++ ", ".intercalate (xs.map compact) ++ "]"
   | .obj kvs => "{" ++ ", ".intercalate (kvs.map fun (k, v) => s!"\"{escape k}\": {compact v}") ++ "}"

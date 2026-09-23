@@ -1,5 +1,5 @@
 /-!
-# 02 · Induction: proving things about *all* natural numbers
+# 02 - Induction: proving things about *all* natural numbers
 
 Tests check a handful of inputs. Induction covers infinitely many:
 prove the base case, then prove that case `n` implies case `n + 1`.
@@ -7,7 +7,7 @@ prove the base case, then prove that case `n` implies case `n + 1`.
 
 namespace Tutorial.Induction
 
-/-! ## Gauss: 0 + 1 + … + n = n(n+1)/2
+/-! ## Gauss: 0 + 1 + ... + n = n(n+1)/2
 
 We avoid division by stating `2 * sum n = n * (n + 1)`.
 -/
@@ -31,7 +31,7 @@ theorem gauss (n : Nat) : 2 * sumTo n = n * (n + 1) := by
 /-! ## Our own natural numbers
 
 To see that nothing is magic, define ℕ from scratch and prove
-addition is commutative – the classic first exercise.
+addition is commutative. The classic first exercise.
 -/
 
 inductive MyNat where

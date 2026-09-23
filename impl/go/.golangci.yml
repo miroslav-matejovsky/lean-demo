@@ -1,0 +1,18 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - exhaustive    # every value of a spec enum (AlarmState, Health, ...) must be handled in a switch
+    - gocritic
+    - godot
+    - misspell
+    - nestif
+    - predeclared
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: false

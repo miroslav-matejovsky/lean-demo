@@ -1,24 +1,18 @@
-<#
-.SYNOPSIS
-  Remove build outputs (Lean .lake, .NET bin/obj, Go test cache, docs site).
-#>
+# Remove build outputs and test results.
+# -Lean also removes lean/.lake (full proof rebuild next time).
 param(
-    [switch]$Lean # also remove lean/.lake (full proof rebuild next time)
+    [switch]$Lean
 )
-. "$PSScriptRoot/_common.ps1"
+. (Join-Path $PSScriptRoot "common.ps1")
 
-$paths = @(
-    (Join-Path $RepoRoot 'site'),
-    (Join-Path $RepoRoot '.cache')
-)
+$paths = @($TestResultsDir, (Join-Path $RepoRoot "site"), (Join-Path $RepoRoot ".cache"))
 $paths += Get-ChildItem $DotnetDir -Recurse -Directory -Include bin, obj | ForEach-Object FullName
-if ($Lean) { $paths += Join-Path $LeanDir '.lake' }
+if ($Lean) { $paths += Join-Path $LeanDir ".lake" }
 
 foreach ($p in $paths) {
     if (Test-Path $p) {
+        Write-Host "removing $p"
         Remove-Item $p -Recurse -Force
-        Write-Host "  removed $p"
     }
 }
-if (Test-Tool 'go') { Invoke-Native $GoDir go @('clean', '-testcache') }
-Write-Ok 'clean'
+if (Test-Tool "go") { Invoke-Native $GoDir go @("clean", "-testcache") }

@@ -1,0 +1,8 @@
+# TODO
+
+Actionable items and known unfinished work. Remove items when done.
+Ideas and experiments live in docs/discussion/ideas.md.
+
+- Enable GitHub Pages: repo Settings -> Pages -> Source: "GitHub Actions".
+- First CI run on GitHub not verified yet (.github/workflows/ci.yml on windows-latest, docs.yml).
+  Action versions and the elan install step may need adjustment.

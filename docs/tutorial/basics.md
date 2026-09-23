@@ -1,4 +1,4 @@
-# 01 · Basics
+# 01 - Basics
 
 Build just this lesson:
 
@@ -10,7 +10,7 @@ What to notice:
 
 - `rfl` and `decide` prove facts **by computation**.
 - Logical connectives are ordinary types. `A ∧ B` is a pair, `A ∨ B` is a
-  tagged union, `A → B` is a function, and `¬A` is `A → False`.
+  tagged union, `A → B` is a function, `¬A` is `A → False`.
 - The same theorem can be written as a *term* (a lambda) or with *tactics*.
 - `omega`, `simp` and `grind` do the tedious work.
 

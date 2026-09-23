@@ -1,0 +1,133 @@
+version: "3"
+
+# All logic lives in PowerShell 7 scripts under taskfile/ (see taskfile/README.md).
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  clean:
+    desc: Remove build outputs and .test-results (task clean -- -Lean also drops lean/.lake)
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/clean.ps1 {{.CLI_ARGS}}{{if .QUIET}} > /dev/null 2>&1{{end}}
+      - echo clean done
+
+  doctor:
+    desc: Check that required tools are installed
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/doctor.ps1
+
+  tools:
+    desc: Install or update Go tools used by the checks (gotestsum, golangci-lint)
+    silent: true
+    cmds:
+      - go install gotest.tools/gotestsum@latest
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+      - echo tools done
+
+  # ---- the truth ----
+
+  lean:
+    desc: Type-check the tutorial and the specs (every proof)
+    silent: true
+    dir: lean
+    cmds:
+      - lake build
+      - echo lean done
+
+  audit:
+    desc: Reject sorry, custom axioms and native_decide; print the trust base of key theorems
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/audit.ps1
+
+  contracts:
+    desc: Regenerate contracts, vectors, C# and Go code, and reference docs from the specs
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/contracts.ps1
+
+  drift:
+    desc: Regenerate and fail if committed artifacts differ from what the specs produce
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/contracts.ps1 -Check
+
+  # ---- the implementations ----
+
+  go:vet:
+    desc: Run go vet
+    silent: true
+    dir: impl/go
+    cmds:
+      - go vet ./...
+      - echo go:vet done
+
+  go:lint:
+    desc: Run golangci-lint (exhaustive switches over spec enums, doc comments, ...)
+    silent: true
+    dir: impl/go
+    cmds:
+      - golangci-lint run ./...
+      - echo go:lint done
+
+  go:test:
+    desc: Run Go conformance tests (saved to .test-results/)
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/go-test.ps1
+
+  dotnet:test:
+    desc: Run .NET conformance tests (saved to .test-results/)
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/dotnet-test.ps1
+
+  mutate:
+    desc: "Inject realistic bugs and require the conformance tests to catch them (IMPL=go|dotnet|all)"
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/mutate.ps1 -Impl {{.IMPL | default "all"}}
+
+  # ---- gates ----
+
+  fast:
+    desc: Proofs, drift, vet and conformance tests. The fast task.
+    silent: true
+    cmds:
+      - task: clean
+        vars:
+          QUIET: "1"
+      - task: drift
+      - task: go:vet
+      - task: go:test
+      - task: dotnet:test
+      - echo fast done
+
+  all:
+    desc: Run all checks. This is the main task to run before considering work complete.
+    silent: true
+    cmds:
+      - task: fast
+      - task: audit
+      - task: go:lint
+      - task: mutate
+      - echo all done
+
+  # ---- docs ----
+
+  docs:
+    desc: Serve the documentation locally with live reload
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/docs.ps1 -Mode serve
+
+  docs:build:
+    desc: Build the static documentation site into site/
+    silent: true
+    cmds:
+      - pwsh -NoProfile -NonInteractive -File taskfile/docs.ps1 -Mode build

@@ -1,112 +1,139 @@
 # Conformance pipeline
 
-`task verify` runs exactly what CI runs:
+`task all` runs the same gate locally and in CI:
 
 ```mermaid
 flowchart LR
     B["lake build<br/>proofs checked"] --> E["truth export<br/>regenerate"] --> D{"git diff<br/>clean?"}
-    D -- no --> F1["✖ drift"]
-    D -- yes --> AU["audit<br/>no sorry, axioms"] --> N[".NET replays vectors"] --> G["Go replays vectors"] --> OK["✔ aligned"]
-    G -.-> MU["(verify:full)<br/>mutation testing"]
+    D -- no --> F1["drift: fail"]
+    D -- yes --> T["Go + .NET<br/>replay vectors"] --> AU["audit<br/>axioms"] --> L["golangci-lint"] --> MU["mutation testing"] --> OK["all done"]
 ```
 
 ## 1. Conformance vectors
 
-`lake exe truth export` runs `step` on two kinds of trace and records every answer:
+`lake exe truth export` runs the spec on message sequences and records every
+answer.
 
-- **Scenarios**: named, hand-written business examples, such as *"total exactly
-  at threshold is auto-approved"*.
-- **Generated traces**: 300 pseudo-random traces from a fixed seed. Event and value
-  choices are biased toward boundaries (`0`, `maxQty`, `maxQty + 1`,
-  `approvalThreshold ± 1`, …).
+- **Scenarios**: named, hand-written examples, for example *"vessel leaves
+  before acknowledgement: alarm waits for the operator"*. They read like
+  acceptance criteria.
+- **Generated traces**: pseudo-random from a fixed seed, biased toward
+  boundaries: zone edges, `staleAfter - 1`, duplicated and late timestamps,
+  "not available" markers, unknown units, `freshFor + 1`.
+- **Convergence cases** (health only): the same reports as two shuffled inboxes
+  with duplicates, plus a split inbox that is merged. The exporter checks the
+  theorems on each case before writing it.
 
-The file format is deliberately boring JSON, one step per line so git diffs stay readable:
+One step per line keeps git diffs readable:
 
 ```json
-{"event": {"type": "AddLine", "sku": "SKU-1", "qty": 2, "unitPrice": 1000},
- "expect": {"ok": true, "status": "Draft", "total": 2000, "lines": 1, "approved": false}}
-{"event": {"type": "Ship"}, "expect": {"ok": false, "error": "InvalidTransition"}}
+{"event": {"type": "Report", "ts": 100, "lat": 35100000, "lon": 1200000},
+ "expect": {"ok": true, "alarm": "UnackActive", "inside": true, "lost": false, "authorized": false, "lastTs": 100}}
+{"event": {"type": "Report", "ts": 100, "lat": 35100000, "lon": 1200000},
+ "expect": {"ok": false, "error": "StaleReport"}}
 ```
 
-Each language needs only a **generic replay harness** of about 100 lines, which never
-changes when business rules change. See
-`impl/dotnet/tests/Orders.Conformance/ConformanceTests.cs` and
-`impl/go/orders/conformance_test.go`.
+Each language has a generic replay harness. It knows the wire format, not the
+business rules, and does not change when the rules change.
 
-!!! info "Why not call Lean at test time?"
-    Committed vectors mean teams need **no Lean toolchain**, tests are fast
-    and hermetic, and every spec change shows up as a reviewable diff. A live
-    oracle (Lean as a sidecar process for property-based testing) is listed in
+!!! info "Why commit vectors instead of calling Lean at test time?"
+    Teams need no Lean toolchain. Tests are fast and hermetic. Every spec change
+    shows up as a reviewable data diff. A live oracle for fuzzing is listed in
     [Ideas](../discussion/ideas.md).
 
 ## 2. Code generation (shape)
 
-Names, enums and constants are generated and never retyped:
+Names, enum values and constants are generated, with documentation taken from
+the spec:
 
-=== "C# (Contract.g.cs)"
+=== "C# (Zone)"
 
     ```csharp
-    --8<-- "impl/dotnet/src/Orders/Generated/Contract.g.cs"
+    --8<-- "impl/dotnet/src/Surveillance/Zone/Generated/Contract.g.cs"
     ```
 
-=== "Go (contract_gen.go)"
+=== "Go (Zone)"
 
     ```go
-    --8<-- "impl/go/orders/contract_gen.go"
+    --8<-- "impl/go/zone/contract_gen.go"
     ```
 
-Both languages also have a `Generated_code_matches_manifest` test that compares
-the code with `manifest.json`.
+=== "C# (Health)"
+
+    ```csharp
+    --8<-- "impl/dotnet/src/Surveillance/Health/Generated/Contract.g.cs"
+    ```
+
+=== "Go (Health)"
+
+    ```go
+    --8<-- "impl/go/health/contract_gen.go"
+    ```
+
+Go's `exhaustive` linter then enforces that every `switch` over a spec enum
+handles every value. Add a state to the spec, regenerate, and the linter points
+at every place in Go that must decide what to do with it.
 
 ## 3. Drift gate
 
-`task contracts:check` regenerates everything and runs `git diff --exit-code`
-on the generated paths. It catches:
+`task drift` regenerates everything and runs `git diff --exit-code` on the
+generated paths. It catches:
 
-- a spec change committed without regenerating the contracts,
-- a hand-edit to generated code,
-- a stale generated state-machine page.
+- a spec change committed without regenerating,
+- a hand edit to generated code,
+- a stale reference page.
+
+`.gitattributes` pins generated files to LF, so the gate gives the same answer
+on Windows and elsewhere.
 
 ## 4. Trust-base audit
 
-`task lean:audit` fails on any `sorry` (an unfinished proof) or custom `axiom`,
-and prints `#print axioms` for every key theorem:
+`task audit` fails on `sorry` (an unfinished proof), custom `axiom` and
+`native_decide` (which trusts the compiler, not only the kernel). It prints
+`#print axioms` for every key theorem:
 
 ```text
-'Truth.Order.reachable_inv' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Truth.Order.replayState_reachable' does not depend on any axioms
+'Truth.Zone.no_silent_clear' depends on axioms: [propext]
+'Truth.Health.convergence' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Tutorial.Nmea.unarmor_armor' does not depend on any axioms
 ```
 
-The three standard axioms are fine. `sorryAx` would mean the "truth" is only a claim.
+The three standard axioms are fine. `sorryAx` would mean the "truth" is only a
+claim.
 
 ## 5. Mutation testing
 
-The vectors pass, but would they catch a real bug? `task mutate` copies each
-implementation to a temp folder, injects a realistic bug, and expects the
-conformance suite to fail.
+The vectors pass. Would they catch a real bug? `task mutate` copies each
+implementation to a temp folder, injects one realistic bug, and requires the
+conformance tests to fail.
 
 ```text
-  [go    ] threshold boundary >= instead of >               KILLED
-  [go    ] max quantity off by one                          KILLED
-  [go    ] approval flag not recorded                       KILLED
-  [go    ] cancelled order can be cancelled again           KILLED
-  [go    ] line limit off by one                            KILLED
-  [go    ] error precedence: price checked before qty       KILLED
-  [dotnet] threshold boundary >= instead of >               KILLED
-  [dotnet] approval flag not recorded                       KILLED
-  [dotnet] reject cancels instead of returning to draft     KILLED
-  [dotnet] can ship directly from pending approval          KILLED
-  [dotnet] max price accepted one cent too high             KILLED
-
-Mutation score: 100% (11/11 killed)
+  [go    ] silent clear: unacknowledged alarm returns to normal    KILLED
+  [go    ] duplicate AIS report accepted                           KILLED
+  [go    ] zone boundary excluded                                  KILLED
+  [go    ] track lost one second late                              KILLED
+  [go    ] going dark clears the alarm                             KILLED
+  [go    ] permit ignored                                          KILLED
+  [go    ] longitude not-available marker treated as invalid       KILLED
+  [go    ] tie prefers the better report                           KILLED
+  [go    ] freshness off by one                                    KILLED
+  [go    ] last arrival wins (not a CRDT)                          KILLED
+  [dotnet] silent clear: unacknowledged alarm returns to normal    KILLED
+  [dotnet] duplicate AIS report accepted                           KILLED
+  [dotnet] re-entry does not re-activate                           KILLED
+  [dotnet] older report wins                                       KILLED
+  [dotnet] freshness uses probe interval only                      KILLED
+  [dotnet] observer tie-break reversed                             KILLED
+mutation score: 16/16 killed
 ```
 
-A **surviving** mutant is a finding about the *vector generator*, not the
-implementation. Fix it in `lean/Truth/Export/Vectors.lean`. This gives the
-architect a measurable quality signal for the truth's test oracle.
+A mutant that does not compile is an error in the mutant list, not a kill. A
+**surviving** mutant is a finding about the *vector generator*. Fix it in
+`lean/Truth/Export`. That gives the architect a measurable quality signal for
+the oracle.
 
 ## CI
 
-`.github/workflows/ci.yml` runs `task verify:full` on Ubuntu with the same
-PowerShell scripts, so there is no divergence between local and CI.
-`.github/workflows/docs.yml` publishes this site to GitHub Pages.
+`.github/workflows/ci.yml` runs `task all` on `windows-latest` with the same
+PowerShell scripts. Test logs from `.test-results/` are kept as a build
+artifact. `.github/workflows/docs.yml` publishes this site to GitHub Pages.

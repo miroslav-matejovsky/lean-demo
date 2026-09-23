@@ -1,10 +1,10 @@
 /-!
-# 03 · Specification vs. implementation (refinement)
+# 03 - Specification vs. implementation (refinement)
 
 This file is the bridge to the architecture part of the repo.
 
-* A **specification** says *what* is correct – written for clarity, not speed.
-* An **implementation** says *how* – written for performance.
+* A **specification** says *what* is correct. Written for clarity, not speed.
+* An **implementation** says *how*. Written for performance.
 * A **refinement proof** shows the implementation behaves exactly like the spec.
 
 This is the core idea an architect can reuse: publish the specification as
@@ -71,7 +71,7 @@ theorem maxOf_mem : ∀ (xs : List Nat) (h : xs ≠ []), maxOf xs h ∈ xs
 
 Because Lean definitions *run*, the same spec that we reason about can
 generate expected outputs for other languages. That is exactly what
-`Truth/Export` does for the Order domain.
+`Truth/Export` does for the safety zone and health specs.
 -/
 
 #eval sumSpec [1, 2, 3, 4]              -- 10

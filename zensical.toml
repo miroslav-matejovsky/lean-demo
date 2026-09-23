@@ -1,6 +1,6 @@
 [project]
 site_name = "Lean as Architectural Truth"
-site_description = "Learning Lean 4: from basic proofs to a verified specification that .NET and Go implementations must conform to."
+site_description = "Learning Lean 4: from basic proofs to proven specifications for maritime surveillance that .NET and Go implementations must conform to."
 site_url = "https://miroslav-matejovsky.github.io/lean-demo/"
 repo_url = "https://github.com/miroslav-matejovsky/lean-demo"
 repo_name = "miroslav-matejovsky/lean-demo"
@@ -11,26 +11,29 @@ site_dir = "site"
 nav = [
   { "Home" = "index.md" },
   { "Getting started" = "getting-started.md" },
-  { "Part 1 · Learning Lean" = [
+  { "Part 1 - Learning Lean" = [
     "tutorial/index.md",
     { "Basics" = "tutorial/basics.md" },
     { "Induction" = "tutorial/induction.md" },
     { "Spec vs. implementation" = "tutorial/spec-vs-impl.md" },
+    { "AIS on the wire" = "tutorial/nmea.md" },
   ] },
-  { "Part 2 · Lean as architectural truth" = [
+  { "Part 2 - Lean as truth" = [
     "architecture/index.md",
-    { "The Order specification" = "architecture/order-spec.md" },
+    { "Safety zone spec" = "architecture/zone-spec.md" },
+    { "Site health spec" = "architecture/health-spec.md" },
     { "Conformance pipeline" = "architecture/conformance.md" },
-    { "Implementations (.NET, Go)" = "architecture/implementations.md" },
+    { "Implementations" = "architecture/implementations.md" },
     { "Operating model" = "architecture/operating-model.md" },
   ] },
-  { "Part 3 · Discussion" = [
-    { "Limits & honest caveats" = "discussion/limits.md" },
-    { "Alternatives & prior art" = "discussion/alternatives.md" },
-    { "Ideas & experiments" = "discussion/ideas.md" },
+  { "Part 3 - Discussion" = [
+    { "Limits and caveats" = "discussion/limits.md" },
+    { "Alternatives" = "discussion/alternatives.md" },
+    { "Ideas and experiments" = "discussion/ideas.md" },
   ] },
   { "Reference" = [
-    { "Order state machine (generated)" = "reference/order-state-machine.md" },
+    { "Zone alarm (generated)" = "reference/zone-alarm.md" },
+    { "Health view (generated)" = "reference/health-view.md" },
     { "Tasks" = "reference/tasks.md" },
     { "Repository layout" = "reference/layout.md" },
   ] },

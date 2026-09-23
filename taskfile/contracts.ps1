@@ -1,52 +1,41 @@
-<#
-.SYNOPSIS
-  Regenerate everything derived from the Lean spec, or check that it is up to date.
-
-.DESCRIPTION
-  generate : lake build (proofs are checked) + `truth export` + gofmt on generated Go.
-  check    : generate, then fail if git sees any difference in the generated files.
-             This is the "drift gate": the committed contracts must equal what the
-             current spec produces.
-#>
+# Build the Lean project (checks every proof) and regenerate everything derived
+# from the specs: contracts, C# and Go code, reference docs.
+# -Check: afterwards fail if git sees any difference in the generated files.
+# The committed artifacts must always equal what the current specs produce.
 param(
-    [ValidateSet('generate', 'check')][string]$Mode = 'generate'
+    [switch]$Check
 )
-. "$PSScriptRoot/_common.ps1"
+. (Join-Path $PSScriptRoot "common.ps1")
 
 $generated = @(
-    'contracts',
-    'impl/dotnet/src/Orders/Generated',
-    'impl/go/orders/contract_gen.go',
-    'docs/reference/order-state-machine.md'
+    "contracts",
+    "impl/dotnet/src/Surveillance/Zone/Generated",
+    "impl/dotnet/src/Surveillance/Health/Generated",
+    "impl/go/zone/contract_gen.go",
+    "impl/go/health/contract_gen.go",
+    "docs/reference/zone-alarm.md",
+    "docs/reference/health-view.md"
 )
 
-Write-Step 'Building Lean project (type-checks every proof)'
-Invoke-Native $LeanDir lake @('build')
+Write-Host "contracts starting"
+Invoke-Native $LeanDir lake @("build")
+Invoke-Native $LeanDir lake @("exe", "truth", "export", $RepoRoot)
+Invoke-Native $GoDir gofmt @("-l", "-w", "zone/contract_gen.go", "health/contract_gen.go")
 
-Write-Step 'Exporting contracts, code and docs from the spec'
-Invoke-Native $LeanDir lake @('exe', 'truth', 'export', $RepoRoot)
-
-if (Test-Tool 'gofmt') {
-    Invoke-Native $GoDir gofmt @('-w', 'orders/contract_gen.go')
-}
-
-if ($Mode -eq 'check') {
-    Write-Step 'Checking for drift between spec and committed artifacts'
+if ($Check) {
     Push-Location $RepoRoot
     try {
-        # Untracked generated files count as drift too.
         $untracked = git ls-files --others --exclude-standard -- @generated
         git diff --exit-code --stat -- @generated
         $diffExit = $LASTEXITCODE
     }
-    finally { Pop-Location }
-    if ($diffExit -ne 0 -or $untracked) {
-        if ($untracked) { Write-Host "untracked: $untracked" }
-        Write-Fail 'Generated artifacts are out of date. Run `task contracts` and commit the result.'
-        exit 1
+    finally {
+        Pop-Location
     }
-    Write-Ok 'Committed artifacts match the specification'
+    if ($diffExit -ne 0 -or $untracked) {
+        if ($untracked) { Write-Host "untracked: $($untracked -join ', ')" }
+        throw "generated artifacts differ from the specs: run 'task contracts' and commit the result"
+    }
+    Write-Host "no drift between specs and committed artifacts"
 }
-else {
-    Write-Ok 'Artifacts regenerated'
-}
+Write-Host "contracts done"

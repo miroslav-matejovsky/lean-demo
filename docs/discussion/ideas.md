@@ -1,64 +1,81 @@
-# Ideas & experiments
+# Ideas and experiments
 
-A backlog of experiments, each small enough for an evening or a weekend.
+A backlog of experiments. Each is small enough for an evening or a weekend.
+Actionable, committed work lives in `.todo`.
 
-## Strengthen the link between spec and code
+## Closer to the domain
+
+- [ ] **Primary ownership (split-brain safety).** Model a lease with explicit
+      clocks, bounded drift and message delay. Prove "at most one primary at any
+      time" under stated timing assumptions. Then do the same in TLA+ and compare
+      effort, readability and what each tool found.
+- [ ] **AIS type 1 decoder spec.** Extend `Tutorial/Nmea.lean` into
+      `Truth/Ais`: full field layout, round-trip `decode (encode m) = m`,
+      multi-fragment sentences. Export vectors and run them against a Go decoder
+      and a .NET decoder. Use a synthetic traffic generator as a second source of
+      inputs.
+- [ ] **Polygon zones.** Point-in-polygon with integer arithmetic on a local
+      grid. Prove the result does not depend on the polygon's starting vertex.
+- [ ] **CPA/TCPA alerts.** Closest point of approach with fixed-point math.
+      Prove monotonicity properties ("closer vessels never get a later alert").
+- [ ] **Late alarms.** Change the zone spec so a late intrusion report raises a
+      late alarm. Re-prove `no_silent_clear`. Compare the operator experience.
+- [ ] **Event-sourced recovery.** Prove that rebuilding a track from its
+      persisted message log (`replayState`) equals the state before the crash.
+      That is the actor restart contract.
+- [ ] **Clocks in the health view.** Replace timestamps with hybrid logical
+      clocks and prove convergence *and* "never older than a causally earlier report".
+
+## Stronger link between spec and code
 
 - [ ] **Live oracle / differential fuzzing.** Add `truth oracle` (JSON lines on
-      stdin/stdout). Go's native fuzzing (`go test -fuzz`) or FsCheck then generates
-      event sequences, sends them to both the implementation and the Lean process,
-      and compares. This is the Cedar approach, with far more coverage than committed vectors.
-- [ ] **Coverage-guided vectors.** Generate traces until every (state × event ×
-      error) cell of the [transition table](../reference/order-state-machine.md)
-      is hit at least *k* times, then emit a coverage report next to `vectors.json`.
-- [ ] **Shrinking.** When conformance fails, minimise the trace to the shortest
-      failing prefix and print it as a Lean `#guard` ready to paste.
-- [ ] **Verify a core in Lean and ship it.** Compile the Lean `step` to C (Lean
-      does this natively) and call it through FFI from Go (cgo) or .NET (P/Invoke).
-      The "implementation" then *is* the verified spec. What is the operational cost?
-- [ ] **Dafny comparison.** Implement the same Order aggregate in Dafny, compile it
-      to C# and Go, and compare effort, readability and guarantees.
-
-## Richer truth
-
-- [ ] **Separation of duties.** Add `submittedBy`/`approvedBy` and prove
-      `approvedBy ≠ submittedBy`. This is the *real* four-eyes rule.
-- [ ] **Cross-aggregate rules.** Model a customer credit limit over *all* open
-      orders, and see how the invariant proof changes.
-- [ ] **Temporal properties.** Prove "every pending order is eventually decided"
-      under a fairness assumption, or hand this part to TLA+.
-- [ ] **Event-sourcing projection.** Prove that folding the event log (`replayState`)
-      equals the stored state, so the read model can't disagree with the aggregate.
-- [ ] **API evolution theorem.** Specify v1 and v2 of the spec and *prove* backward
-      compatibility: every v1 trace behaves the same in v2.
+      stdin/stdout). Drive it from `go test -fuzz` and from FsCheck: generate
+      message sequences, send them to both the implementation and Lean, compare.
+      The Cedar approach, with far more coverage than committed vectors.
+- [ ] **Coverage-guided vectors.** Generate until every (alarm state x message x
+      outcome) cell of the [reaction table](../reference/zone-alarm.md) is hit at
+      least *k* times. Emit a coverage report next to the vectors.
+- [ ] **Shrinking.** On a conformance failure, minimise the trace and print it
+      as a Lean `#guard` ready to paste.
+- [ ] **Run the spec itself.** Lean compiles to C. Call the compiled `step`
+      through cgo or P/Invoke. The implementation *is* the verified spec. What is
+      the operational cost on Windows services?
+- [ ] **Actor wrappers.** Wrap `Track.Apply` in an Ergo actor (Go) and a .NET
+      virtual actor, and run the same vectors through the mailbox, including
+      restarts.
 
 ## Better generation
 
-- [ ] **Use Lean metaprogramming** to derive codegen from `Status`/`ErrorCode`
-      automatically (a `deriving` handler), removing the hand-written `Status.all`.
-- [ ] **OpenAPI / JSON Schema export** for events, making the Lean spec the
-      source for API contracts too.
-- [ ] **Theorem catalogue.** Export theorem names and docstrings into the docs
-      automatically, giving auditors a list of "rules guaranteed by proof".
+- [ ] **Deriving handlers.** Use Lean metaprogramming to derive `name` and `all`
+      for enums, removing hand-written lists in the specs.
+- [ ] **More export targets.** CUE schemas for messages, OpenAPI for an alarm
+      API, D2 diagrams instead of Mermaid.
+- [ ] **Canonical information model.** Treat the Lean types as the canonical
+      model and generate the language-specific projections from it.
+- [ ] **Theorem catalogue.** Export theorem names and docstrings into the docs:
+      a list of "rules guaranteed by proof" for operations and safety reviews.
 
-## AI in the loop (2026 reality)
+## LLMs, with the checker in charge
 
-- [ ] **LLM writes the implementation, Lean judges it.** Give an agent `Spec.lean`
-      plus the harness and ask for a Rust or Kotlin implementation. The conformance
-      suite is the acceptance test, which makes the spec a guardrail for AI-generated code.
-- [ ] **LLM proposes proofs.** Try recent provers or assistants on new invariants.
-      The kernel still checks everything, so there is no trust issue.
-- [ ] **Spec from prose.** Have an LLM draft `Spec.lean` from a policy document,
-      then have humans review only the theorem *statements*. Does this
-      lower the barrier for architects?
+LLMs are advanced autocomplete. The useful setup is one where their output is
+checked by something that does not guess.
 
-## Open questions to argue about
+- [ ] **LLM proposes proofs, kernel decides.** A wrong proof does not compile.
+      There is no trust issue, only a time issue.
+- [ ] **LLM writes an implementation, vectors judge it.** Give an agent
+      `Spec.lean` plus the harness and ask for a Rust implementation. The
+      conformance suite and mutation score are the acceptance test.
+- [ ] **Spec from prose.** Draft `Spec.lean` from an operating procedure with an
+      LLM, then review only the theorem statements. Does that lower the barrier,
+      or does it create an illusion of competence one level up?
 
-1. Who is accountable when the theorem is wrong, the architect or the compliance
-   officer who approved its statement?
-2. Should conformance be a **deployment gate** (can't deploy non-conforming
-   services) or a **visibility signal** (dashboard)? What happens in an incident hotfix?
-3. Does a formal "truth" centralise power in architecture in a way that slows
-   teams down? Or does it *free* teams, since anything that passes the vectors is acceptable?
-4. Is an executable spec plus vectors already 80 % of the value, with proofs as
-   a nice-to-have? Or are the proofs what keep the spec honest over the years?
+## Open questions
+
+1. Who is accountable when a theorem is wrong: the architect who wrote it or the
+   operations lead who approved its statement?
+2. Should conformance be a **deployment gate** or a **visibility signal**? What
+   happens to an incident hotfix that fails the vectors?
+3. Does a formal truth centralise power in architecture and slow teams down? Or
+   does it free them, because anything that passes the vectors is acceptable?
+4. Is an executable spec plus vectors already 80 % of the value, with proofs as a
+   nice-to-have? Or are the proofs what keep the spec honest over years?

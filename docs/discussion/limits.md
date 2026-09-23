@@ -1,81 +1,105 @@
-# Limits & honest caveats
+# Limits and honest caveats
 
-This is a learning repo, so it should be clear about what it does *not* prove.
+This is a learning repo. It should be clear about what it does *not* prove.
 
 ## 1. The refinement gap: the biggest caveat
 
-What is **proven**: *the spec* satisfies the business rules, for all inputs.
-What is **tested**: *the implementations* agree with the spec on ~4 000 sampled steps.
-
-These are different guarantees. The chain is:
+What is **proven**: *the spec* satisfies its rules, for all message sequences.
+What is **tested**: *the implementations* agree with the spec on about 6 000
+sampled steps plus 60 convergence cases.
 
 ```text
-business intent ──(human judgement)──▶ theorems
-theorems        ──(Lean kernel: PROOF)──▶ spec
-spec            ──(vectors: SAMPLED)──▶ .NET / Go code
+operational intent --(human judgement)-->  theorems
+theorems           --(Lean kernel: PROOF)--> spec
+spec               --(vectors: SAMPLED)-->   .NET / Go code
 ```
 
-A .NET bug that only shows up with 7 lines, a price of 333 333 and a reject-resubmit
-cycle could slip through. Mutation testing measures the size of that hole, but
-doesn't close it. Closing it fully requires the implementation itself to be
-verified (see [Alternatives](alternatives.md): Dafny, Verus, Aeneas, or writing
-the core in Lean).
+A .NET bug that shows up only for a vessel that re-enters the zone exactly at
+the boundary one second before going dark could slip through. Mutation testing
+measures the hole. It does not close it. Closing it means verifying the
+implementation itself: Dafny, Verus, Aeneas, or compiling the Lean spec and
+calling it. See [Alternatives](alternatives.md).
 
-!!! question "Is 'sampled' good enough?"
-    Compare it to the status quo, not to perfection. Most enterprises today have
-    zero machine-checked link between the architecture document and the code.
-    Going from "a Confluence page" to "4 000 spec-derived checks plus proven rules
-    about the spec" is a big step, even if it isn't the final one.
+!!! question "Is sampled good enough?"
+    Compare with the status quo, not with perfection. Most systems today have no
+    machine-checked link between the architecture document and the code. A
+    proven spec plus thousands of generated checks plus a mutation score is a
+    large step, even if it is not the last one.
 
 ## 2. Garbage in, proven garbage out
 
-Lean proves that the spec satisfies *the theorems you wrote*. If the theorem
-says the wrong thing, you have a very rigorous proof of the wrong thing.
-Mitigations:
+Lean proves that the spec satisfies *the theorems you wrote*. A wrong theorem is
+a rigorous proof of the wrong thing. Mitigations:
 
-- keep theorem statements short and in business language (reviewable),
-- add **progress** theorems (`draft_can_ship`) so the spec can't be "safe" by
-  rejecting everything,
-- write adversarial theorems ("it is impossible to …") and scenario `#guard`s.
+- short theorem statements in operational language, reviewed by operations,
+- **progress** properties next to safety properties: a spec that rejects every
+  report is "safe" and useless,
+- adversarial theorems, like `late_intrusion_missed`, that state uncomfortable
+  facts on purpose.
 
-## 3. Only what is modelled is covered
+## 3. Time is an assumption
 
-The spec knows nothing about:
+Both specs take timestamps as given:
 
-- **Concurrency.** Two approvers clicking at the same moment, optimistic locking.
-- **Distribution.** At-least-once delivery, event reordering, sagas, idempotency.
-- **Time.** Timeouts, SLAs, "approve within 48 h".
-- **Persistence and serialisation.** JSON rounding, DB constraints, migrations.
-- **Authorization.** *Who* may approve. The four-eyes rule here only says *that*
-  someone approved, not that it was a different person.
+- **Zone**: `ts` is the receive time assigned ashore. If two receivers with
+  skewed clocks feed the same track, "stale" means something else than you
+  think. AIS itself carries only the UTC second of the position.
+- **Health**: "newer wins" compares probe times from two machines. The views
+  *converge* whatever the clocks do (proven). They may converge to the *wrong*
+  report under clock skew (not proven, not true). Hybrid logical clocks or
+  per-observer sequence numbers would move this into the spec.
 
-Each can be modelled, but modelling costs effort. For distributed protocols, TLA+
-or P is usually the better tool.
+## 4. Geometry is simplified
 
-## 4. Representation mismatches
+- The zone is an axis-aligned box in AIS units. Real zones are circles or
+  polygons on WGS84. Distances need trigonometry and floating point.
+- Lean can reason about exact integers and rationals well, about IEEE floats
+  poorly. A realistic spec keeps integer or fixed-point geometry (a local
+  projected grid, squared distances) and states the approximation error as an
+  explicit assumption.
+- The "position is inside" decision near the boundary is exactly where
+  implementations with different float code will disagree. The spec fixes the
+  rule. The vectors test the boundary.
 
-The spec uses `Nat`, and the code uses `int64`. We **proved** totals fit (`total_fits_int64`),
-but only for *reachable* orders. An implementation that accepts `qty = 2^62`
-before validating could still overflow in intermediate arithmetic. Strings are
-another trap: Lean `String` is Unicode scalar values, while .NET is UTF-16.
-SKU comparison and length semantics could differ.
+## 5. Actors and the runtime are outside the spec
 
-## 5. Vector generation bias
+The spec covers one actor's behaviour for a given message sequence. It does not
+cover:
 
-Random traces with uniform event choice rarely reach deep states. In the current
-vectors, only one step hits `TooManyLines`, which comes from a hand-written scenario.
-Improve this with coverage-guided generation (see [Ideas](ideas.md)), and check
-coverage per transition, which you can compute from `vectors.json`.
+- **mailbox order across actors** (two consoles acknowledging at the same moment),
+- **restarts and persistence** (is state rebuilt by replaying the log, and is
+  that replay the same `replayState`?),
+- **supervision** (what happens to alarms while the actor is down),
+- **authorization of operators** (four-eyes, who may acknowledge).
 
-## 6. Cost and skills
+Some of these fit Lean well: event-sourced recovery is a theorem about
+`replayState`. Others, like concurrent protocols, fit TLA+ or P better.
 
-- Writing the spec: cheap. It is a functional program.
-- Writing proofs: medium to expensive, and needs a trained person. Automation
-  (`grind`) and LLMs help a lot for invariant-style proofs like the ones here.
-- Keeping it alive: the drift gate makes *not* updating the spec impossible,
-  which is the point, but it is also friction. Expect pushback.
+## 6. Split-brain is not in scope
 
-## 7. Toolchain churn
+The health spec assumes both instances are alive and exchange reports. The hard
+problem in a primary/standby platform is **ownership**: at most one primary,
+even during partitions and lease expiry. That is a distributed protocol with
+timing assumptions. It deserves a model checker (TLA+) or a careful Lean model
+with explicit clocks. It is listed in [Ideas](ideas.md).
 
-Lean 4 moves fast. This repo already hit a deprecation (`String.trimRight`)
-between versions. Pin the toolchain (`lean/lean-toolchain`) and budget for upgrades.
+## 7. Representation
+
+The spec uses unbounded `Nat` and `Int`. Go and .NET use `int64`. For AIS units
+and seconds the values are far from overflow, but that is an argument, not a
+theorem. A theorem like "every reachable value fits in int64" is cheap to add
+and belongs in a production spec.
+
+## 8. Vector generation bias
+
+Random traces with uniform choices rarely reach deep states. The generators are
+biased toward boundaries by hand. Coverage-guided generation is better. See
+[Ideas](ideas.md).
+
+## 9. Cost, skills, churn
+
+- Writing the spec is cheap. It is a small functional program.
+- Writing proofs is medium to expensive and needs a trained person. The proofs
+  here are mostly `cases`, `simp` and `omega`.
+- Lean moves fast. This repo already hit a deprecated API between minor
+  versions. Pin the toolchain and budget for upgrades.
