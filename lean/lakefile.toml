@@ -1,0 +1,16 @@
+name = "truth"
+version = "1.0.0"
+defaultTargets = ["Tutorial", "Truth", "truth"]
+
+# Part 1 - learning Lean: small mathematical proofs.
+[[lean_lib]]
+name = "Tutorial"
+
+# Part 2 - the architectural "truth": domain specification + proofs + exporters.
+[[lean_lib]]
+name = "Truth"
+
+# `lake exe truth export <repoRoot>` regenerates contracts, code and docs from the spec.
+[[lean_exe]]
+name = "truth"
+root = "Main"

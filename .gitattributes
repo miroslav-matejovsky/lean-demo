@@ -1,0 +1,4 @@
+# Generated artifacts are compared byte-for-byte by the drift gate,
+# so line endings must not depend on the platform or git settings.
+* text=auto eol=lf
+*.png binary

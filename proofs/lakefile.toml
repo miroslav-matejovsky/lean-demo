@@ -1,7 +1,0 @@
-name = "proofs"
-version = "0.1.0"
-defaultTargets = ["proofs"]
-
-[[lean_exe]]
-name = "proofs"
-root = "Main"

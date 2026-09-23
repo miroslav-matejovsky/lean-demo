@@ -1,0 +1,16 @@
+# Lean
+lean/.lake/
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+
+# docs
+site/
+.cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
