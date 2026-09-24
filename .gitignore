@@ -1,0 +1,19 @@
+# Lean
+lean/.lake/
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+
+# test output
+.test-results/
+
+# docs
+site/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db

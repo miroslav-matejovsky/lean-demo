@@ -1,0 +1,66 @@
+name: all
+
+# Runs the same gate as locally: `task all`
+# (proofs, drift, vet, conformance, audit, lint, mutation testing).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  all:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan (Lean toolchain manager)
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "elan.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "elan"
+          Invoke-WebRequest "https://github.com/leanprover/elan/releases/latest/download/elan-x86_64-pc-windows-msvc.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath $dir
+          & (Join-Path $dir "elan-init.exe") -y --default-toolchain none
+          Join-Path $env:USERPROFILE ".elan\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: Cache Lean toolchain and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan/toolchains
+            lean/.lake
+          key: lean-${{ runner.os }}-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ hashFiles('lean/**/*.lean') }}
+          restore-keys: lean-${{ runner.os }}-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: impl/go/go.mod
+          cache-dependency-path: impl/go/go.sum
+
+      - uses: go-task/setup-task@v1
+
+      - name: Install Go tools
+        run: |
+          task tools
+          Join-Path (go env GOPATH) "bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: task all
+        run: task all
+
+      - name: Keep test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .test-results/
+          if-no-files-found: ignore

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "leanprover.lean4",
+    "ms-dotnettools.csdevkit",
+    "golang.go",
+    "task.vscode-task",
+    "ms-vscode.powershell"
+  ]
+}

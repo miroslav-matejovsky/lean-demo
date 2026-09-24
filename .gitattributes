@@ -1,0 +1,49 @@
+# -------------------------------------------------------------------
+# Global defaults
+# -------------------------------------------------------------------
+
+# Normalize line endings for all text files (do not depend on core.autocrlf)
+* text=auto
+
+# -------------------------------------------------------------------
+# Generated artifacts
+# The drift gate compares them byte for byte with what the specs produce,
+# so their line endings must never depend on the platform.
+# -------------------------------------------------------------------
+
+contracts/**              text eol=lf linguist-generated
+*_gen.go                  text eol=lf linguist-generated
+*.g.cs                    text eol=lf linguist-generated
+docs/reference/zone-alarm.md   text eol=lf linguist-generated
+docs/reference/health-view.md  text eol=lf linguist-generated
+
+# -------------------------------------------------------------------
+# Sources
+# -------------------------------------------------------------------
+
+*.lean text eol=lf
+*.go   text eol=lf linguist-language=Go
+go.mod text
+go.sum text
+*.cs   text
+*.csproj text
+*.slnx text
+
+# PowerShell (Windows-native)
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# -------------------------------------------------------------------
+# Documentation
+# -------------------------------------------------------------------
+
+*.md linguist-documentation
+
+# -------------------------------------------------------------------
+# Binary
+# -------------------------------------------------------------------
+
+*.png binary
+*.svg binary
+*.exe binary

@@ -1,0 +1,23 @@
+{
+  "specVersion": "1.0.0",
+  "constants": {
+    "unitsPerDegree": 600000,
+    "maxLat": 54000000,
+    "maxLon": 108000000,
+    "latNotAvailable": 54600000,
+    "lonNotAvailable": 108600000,
+    "zoneLatMin": 35097300,
+    "zoneLatMax": 35102700,
+    "zoneLonMin": 1194800,
+    "zoneLonMax": 1205200,
+    "staleAfter": 180
+  },
+  "alarmStates": ["Normal", "UnackActive", "AckActive", "UnackCleared"],
+  "errorCodes": ["PositionUnavailable", "InvalidPosition", "StaleReport", "NothingToAcknowledge"],
+  "events": [
+    {"type": "Report", "fields": ["ts", "lat", "lon"]},
+    {"type": "Acknowledge"},
+    {"type": "Authorize", "fields": ["authorized"]},
+    {"type": "Tick", "fields": ["now"]}
+  ]
+}

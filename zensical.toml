@@ -1,0 +1,98 @@
+[project]
+site_name = "Lean as Architectural Truth"
+site_description = "Learning Lean 4: from basic proofs to proven specifications for maritime surveillance that .NET and Go implementations must conform to."
+site_url = "https://miroslav-matejovsky.github.io/lean-demo/"
+repo_url = "https://github.com/miroslav-matejovsky/lean-demo"
+repo_name = "miroslav-matejovsky/lean-demo"
+edit_uri = "edit/main/docs/"
+docs_dir = "docs"
+site_dir = "site"
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = "getting-started.md" },
+  { "Part 1 - Learning Lean" = [
+    "tutorial/index.md",
+    { "Basics" = "tutorial/basics.md" },
+    { "Induction" = "tutorial/induction.md" },
+    { "Spec vs. implementation" = "tutorial/spec-vs-impl.md" },
+    { "AIS on the wire" = "tutorial/nmea.md" },
+  ] },
+  { "Part 2 - Lean as truth" = [
+    "architecture/index.md",
+    { "Safety zone spec" = "architecture/zone-spec.md" },
+    { "Site health spec" = "architecture/health-spec.md" },
+    { "Conformance pipeline" = "architecture/conformance.md" },
+    { "Implementations" = "architecture/implementations.md" },
+    { "Operating model" = "architecture/operating-model.md" },
+  ] },
+  { "Part 3 - Discussion" = [
+    { "Limits and caveats" = "discussion/limits.md" },
+    { "Alternatives" = "discussion/alternatives.md" },
+    { "Ideas and experiments" = "discussion/ideas.md" },
+  ] },
+  { "Reference" = [
+    { "Zone alarm (generated)" = "reference/zone-alarm.md" },
+    { "Health view (generated)" = "reference/health-view.md" },
+    { "Tasks" = "reference/tasks.md" },
+    { "Repository layout" = "reference/layout.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.action.edit",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.details = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.mark = {}
+pymdownx.snippets.base_path = ["."]
+pymdownx.snippets.check_paths = true
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+pymdownx.tabbed.alternate_style = true
+pymdownx.tasklist.custom_checkbox = true

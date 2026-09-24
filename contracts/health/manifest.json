@@ -1,0 +1,9 @@
+{
+  "specVersion": "1.0.0",
+  "constants": {"siteUnits": 4, "probeInterval": 10, "probeTimeout": 3, "freshFor": 23},
+  "health": ["Healthy", "Degraded", "Unhealthy"],
+  "observers": ["Primary", "Standby"],
+  "statuses": ["Healthy", "Degraded", "Unhealthy", "Unknown"],
+  "errorCodes": ["UnknownUnit"],
+  "ordering": ["ts", "health (worse wins)", "observer", "unit"]
+}
